@@ -1,47 +1,33 @@
-#define _USE_MATH_DEFINES
-
-#include "uWS\uWS.h"
+#include <uWS/uWS.h>
 #include <iostream>
 #include "json.hpp"
 #include <math.h>
 #include "ukf.h"
 #include "tools.h"
 
-
 using namespace std;
 
 // for convenience
 using json = nlohmann::json;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
-
-
-
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
-std::stringstream hasData(std::string s) {
-  auto found_null = s.find("null");
-  auto b1 = s.find_first_of("[");
-  auto b2 = s.find_last_of("]");
-  if (found_null != std::string::npos) {
-    return std::stringstream();
-  }
-  else if (b1 != std::string::npos && b2 != std::string::npos) {
-    std::stringstream tmp = std::stringstream();
-    tmp.str(s.substr(b1, b2 - b1 + 1));
-    return tmp;
-  }
-  return std::stringstream();
+std::string hasData(std::string s) {
+	auto found_null = s.find("null");
+	auto b1 = s.find_first_of("[");
+	auto b2 = s.find_first_of("]");
+	if (found_null != std::string::npos) {
+		return "";
+	}
+	else if (b1 != std::string::npos && b2 != std::string::npos) {
+		return s.substr(b1, b2 - b1 + 1);
+	}
+	return "";
 }
-
 
 int main()
 {
-
 	uWS::Hub h;
 
 	// Create a Kalman Filter instance
@@ -61,7 +47,7 @@ int main()
 		{
 
 			auto s = hasData(std::string(data));
-			if (s.str() != "") {
+			if (s != "") {
 
 				auto j = json::parse(s);
 
@@ -166,24 +152,39 @@ int main()
 
 	});
 
-  h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    std::cout << "Connected!!!" << std::endl;
-  });
+	// We don't need this since we're not using HTTP but if it's removed the program
+	// doesn't compile :-(
+	h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t, size_t) {
+		const std::string s = "<h1>Hello world!</h1>";
+		if (req.getUrl().valueLength == 1)
+		{
+			res->end(s.data(), s.length());
+		}
+		else
+		{
+			// i guess this should be done more gracefully?
+			res->end(nullptr, 0);
+		}
+	});
 
-  h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
-    (ws).close();
-    std::cout << "Disconnected" << std::endl;
-  });
+	h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+		std::cout << "Connected!!!" << std::endl;
+	});
 
-  int port = 4567;
-  if (h.listen("0.0.0.0", port))
-  {
-    std::cout << "Listening to port " << port << std::endl;
-  }
-  else
-  {
-    std::cerr << "Failed to listen to port" << std::endl;
-    return -1;
-  }
-  h.run();
+	h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code, char *message, size_t length) {
+		ws.close();
+		std::cout << "Disconnected" << std::endl;
+	});
+
+	int port = 4567;
+	if (h.listen(port))
+	{
+		std::cout << "Listening to port " << port << std::endl;
+	}
+	else
+	{
+		std::cerr << "Failed to listen to port" << std::endl;
+		return -1;
+	}
+	h.run();
 }
